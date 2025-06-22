@@ -459,7 +459,15 @@ if __name__ == "__main__":
             print("Initializing backtest engine..."); engine = FVGBacktestEngine(processed_df, STRATEGY_CONFIG, initial_balance=initial_account_balance)
             performance_report, trade_log = engine.run_backtest()
             print("\n--- Backtest Complete ---")
-            if performance_report: print("Performance report generated.")
-                # trade_log.to_csv("trade_log_output.csv", index=False) # Example save
-            else: print("Backtest finished, but no report was generated (likely no trades or error).")
+            if performance_report and trade_log is not None and not trade_log.empty:
+                print("Performance report generated.")
+                try:
+                    trade_log.to_csv("trade_log_output.csv", index=False)
+                    print("Trade log saved to trade_log_output.csv")
+                except Exception as e:
+                    print(f"Error saving trade log: {e}")
+            elif performance_report: # Report exists but trade_log might be None or empty
+                 print("Performance report generated, but no trades to log or trade log is empty.")
+            else:
+                print("Backtest finished, but no report was generated (likely no trades or error).")
     print("--- End of Script ---")

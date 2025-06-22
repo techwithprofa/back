@@ -13,17 +13,31 @@ POINT_SIZE = 0.01
 
 # --- Data Preprocessing ---
 def preprocess_data(df):
-    expected_columns = ['timestamp', 'open', 'high', 'low', 'close']
-    # Allow for volume to be optional as per spec
-    if not all(col in df.columns for col in expected_columns):
-        if not all(col in df.columns for col in ['timestamp', 'open', 'high', 'low', 'close']):
-            raise ValueError(f"Input CSV must contain columns: timestamp, open, high, low, close (volume is optional)")
-        if 'volume' not in df.columns: # Add dummy volume if not present
-            df['volume'] = 0
+    # Updated expected columns to match the CSV file
+    expected_columns_original_case = ['Date', 'Open', 'High', 'Low', 'Close']
 
+    # Check if all expected columns are present
+    if not all(col in df.columns for col in expected_columns_original_case):
+        # Provide a more informative error if essential columns are missing
+        missing_cols = [col for col in expected_columns_original_case if col not in df.columns]
+        raise ValueError(f"Input CSV must contain columns: {', '.join(expected_columns_original_case)}. Missing: {', '.join(missing_cols)}")
+
+    # Rename columns to lowercase and 'Date' to 'timestamp'
+    df.rename(columns={
+        'Date': 'timestamp',
+        'Open': 'open',
+        'High': 'high',
+        'Low': 'low',
+        'Close': 'close',
+        'Volume': 'volume' # Ensure volume is also lowercased if present
+    }, inplace=True)
+
+    # Convert timestamp
     df['timestamp'] = pd.to_datetime(df['timestamp'])
     df = df.sort_values('timestamp').reset_index(drop=True)
-    df.ffill(inplace=True) # Basic missing data handling
+
+    # Handle missing data - ffill then bfill to cover edges
+    df.ffill(inplace=True)
     df.bfill(inplace=True)
 
     # Calculate True Range and ATR(14)
@@ -414,7 +428,9 @@ if __name__ == "__main__":
     print("--- Backtest Starting ---"); print(f"Strategy Config: {STRATEGY_CONFIG}")
     data_filepath = "XAU_5m_data_2024_filtered.csv"; initial_account_balance = 10000.0
     try:
-        print(f"Attempting to load data from: {data_filepath}..."); raw_df = pd.read_csv(data_filepath)
+        print(f"Attempting to load data from: {data_filepath}...");
+        # Updated read_csv to handle semicolon delimiter and specific column names
+        raw_df = pd.read_csv(data_filepath, delimiter=';', header=0, names=['Date', 'Open', 'High', 'Low', 'Close', 'Volume'])
         print(f"Successfully loaded data. Shape: {raw_df.shape}")
     except FileNotFoundError:
         print(f"Warning: {data_filepath} not found. Generating dummy data for testing."); num_days=2 # Use fewer days for quicker dummy test
